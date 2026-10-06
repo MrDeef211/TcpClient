@@ -7,6 +7,12 @@ namespace TcpClient
 {
     internal class Program
     {
+        private const int ConectTimeout = 3;
+
+        private const int Port = 8888;
+
+        private const string BroadcastIp = "10.1.1.";
+
         static async Task Main(string[] args)
         {
             // Поиск и подключение
@@ -56,6 +62,7 @@ namespace TcpClient
             #region
 
             string? message = "";
+            ValueTask sending = ValueTask.CompletedTask;
 
             while (!"!exit".StartsWith(message ?? "null") || message == "")
             {
@@ -63,7 +70,8 @@ namespace TcpClient
                 if (message == null || message == "")
                     continue;
                 byte[] bytes = Encoding.UTF8.GetBytes(message);
-                stream.Write(bytes);
+                await sending;
+                sending = stream.WriteAsync(bytes);
             }
 
             #endregion
@@ -74,7 +82,7 @@ namespace TcpClient
             List<Task<bool>> tasks = new List<Task<bool>>();
             for (int i = 0; i < 256; i++)
             {
-                tasks.Add(TryConnectAsync(new(IPAddress.Parse($"10.1.1.{i}"), 5001)));
+                tasks.Add(TryConnectAsync(new(IPAddress.Parse($"{BroadcastIp}{i}"), Port)));
             }
             bool[] success = await Task.WhenAll(tasks);
 
@@ -82,9 +90,9 @@ namespace TcpClient
             for (int i = 0; i < success.Length; i++)
             {
                 if (success[i]
-                    && IPAddress.Parse($"10.1.1.{i}").AddressFamily != AddressFamily.InterNetwork)
+                    && IPAddress.Parse($"{BroadcastIp}{i}").AddressFamily != AddressFamily.InterNetwork)
                 {
-                    activeUsers.Add(new IPEndPoint(IPAddress.Parse($"10.1.1.{i}"), 5001));
+                    activeUsers.Add(new IPEndPoint(IPAddress.Parse($"{BroadcastIp}{i}"), Port));
                 }
             }
 
@@ -95,11 +103,11 @@ namespace TcpClient
         {
             try
             {
-                using CancellationTokenSource cts = new CancellationTokenSource(
-                    TimeSpan.FromSeconds(3));
+                using CancellationTokenSource cts = new(
+                    TimeSpan.FromSeconds(ConectTimeout));
 
                 using Client client = new();
-                await client.ConnectAsync(ip, cts.Token);
+                await client.ConnectAsync(ip, cts.Token).ConfigureAwait(false);
 
                 return true;
             }
