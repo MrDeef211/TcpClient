@@ -32,7 +32,7 @@ namespace TcpClient
 
             foreach (var user in users)
             {
-                Console.WriteLine(user.Address.AddressFamily.ToString());
+                Console.WriteLine(user.Address.ToString());
             }
 
             Console.WriteLine("\nВведите желаемого пользователя для подключения:");
@@ -53,8 +53,15 @@ namespace TcpClient
                 }
             }
 
-            using var client = new Client(server);
+            string userName = "User";
+
+            using var client = new Client();
+            client.Connect(server);
+
             using NetworkStream stream = client.GetStream();
+            StreamWriter writer = new StreamWriter(stream);
+
+            writer.Write(userName);
 
             #endregion
 
@@ -62,16 +69,15 @@ namespace TcpClient
             #region
 
             string? message = "";
-            ValueTask sending = ValueTask.CompletedTask;
+            Task sending = Task.CompletedTask;
 
             while (!"!exit".StartsWith(message ?? "null") || message == "")
             {
                 message = Console.ReadLine();
                 if (message == null || message == "")
                     continue;
-                byte[] bytes = Encoding.UTF8.GetBytes(message);
                 await sending;
-                sending = stream.WriteAsync(bytes);
+                sending = writer.WriteAsync(message);
             }
 
             #endregion
