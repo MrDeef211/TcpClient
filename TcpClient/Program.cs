@@ -89,12 +89,15 @@ namespace TcpClient
             List<IPEndPoint> activeUsers = new List<IPEndPoint>();
             for (int i = 0; i < success.Length; i++)
             {
+                if (!success[i])
+                    continue;
+
                 var myIpAddresses = Dns.GetHostAddresses(Dns.GetHostName());
                 IPAddress currentIp = IPAddress.Parse($"{BroadcastIp}{i}");
                 bool isNotMyIp = !IPAddress.IsLoopback(currentIp) 
                     && !myIpAddresses.Any(addr => addr.ToString() == currentIp.ToString());
 
-                if (success[i] && isNotMyIp)
+                if (isNotMyIp)
                 {
                     activeUsers.Add(new IPEndPoint(IPAddress.Parse($"{BroadcastIp}{i}"), Port));
                 }
